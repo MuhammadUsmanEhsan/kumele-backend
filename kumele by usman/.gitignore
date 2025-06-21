@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.env
+*.sqlite3
+*.db
+
+# FastAPI / Uvicorn / Logs
+*.log
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.terraform.lock.hcl
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+.env.*
+*.exe
+*.bak
+*.tmp
+*.swp

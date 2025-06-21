@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebAuthn Test Page</title>
+    <style>
+        body { font-family: sans-serif; padding: 2rem; max-width: 500px; margin: auto; }
+        input, button { padding: 10px; margin: 5px 0; width: 100%; }
+        .section { margin-bottom: 2rem; }
+    </style>
+</head>
+<body>
+    <h1>WebAuthn Passkey Test</h1>
+
+    <div class="section">
+        <h2>Register</h2>
+        <input id="reg-username" placeholder="Username" />
+        <input id="reg-display-name" placeholder="Display Name" />
+        <button onclick="startRegistration()">Register with Passkey</button>
+    </div>
+
+    <div class="section">
+        <h2>Login</h2>
+        <input id="login-username" placeholder="Username" />
+        <button onclick="startLogin()">Login with Passkey</button>
+    </div>
+
+    <div id="output"></div>
+
+    <script>
+        const baseUrl = "http://localhost:8000";  // Change to your backend base URL
+
+        function bufferDecode(value) {
+            return Uint8Array.from(atob(value), c => c.charCodeAt(0));
+        }
+
+        function bufferEncode(value) {
+            return btoa(String.fromCharCode(...new Uint8Array(value)));
+        }
+
+        async function startRegistration() {
+            const username = document.getElementById("reg-username").value;
+            const displayName = document.getElementById("reg-display-name").value;
+
+            const init = await fetch(`${baseUrl}/webauthn/register/init`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, display_name: displayName })
+            });
+
+            const options = await init.json();
+            options.challenge = bufferDecode(options.challenge);
+            options.user.id = bufferDecode(options.user.id);
+
+            const credential = await navigator.credentials.create({
+                publicKey: options
+            });
+
+            const credentialData = {
+                id: credential.id,
+                rawId: bufferEncode(credential.rawId),
+                response: {
+                    attestationObject: bufferEncode(credential.response.attestationObject),
+                    clientDataJSON: bufferEncode(credential.response.clientDataJSON)
+                },
+                type: credential.type
+            };
+
+            const finish = await fetch(`${baseUrl}/webauthn/register/finish`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, credential: credentialData })
+            });
+
+            const result = await finish.json();
+            document.getElementById("output").innerText = JSON.stringify(result, null, 2);
+        }
+
+        async function startLogin() {
+            const username = document.getElementById("login-username").value;
+
+            const init = await fetch(`${baseUrl}/webauthn/login/init`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username })
+            });
+
+            const options = await init.json();
+            options.challenge = bufferDecode(options.challenge);
+            if (options.allowCredentials) {
+                options.allowCredentials = options.allowCredentials.map(cred => ({
+                    id: bufferDecode(cred.id),
+                    type: cred.type
+                }));
+            }
+
+            const assertion = await navigator.credentials.get({ publicKey: options });
+
+            const credentialData = {
+                id: assertion.id,
+                rawId: bufferEncode(assertion.rawId),
+                response: {
+                    authenticatorData: bufferEncode(assertion.response.authenticatorData),
+                    clientDataJSON: bufferEncode(assertion.response.clientDataJSON),
+                    signature: bufferEncode(assertion.response.signature),
+                    userHandle: assertion.response.userHandle ? bufferEncode(assertion.response.userHandle) : null
+                },
+                type: assertion.type
+            };
+
+            const finish = await fetch(`${baseUrl}/webauthn/login/finish`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, credential: credentialData })
+            });
+
+            const result = await finish.json();
+            document.getElementById("output").innerText = JSON.stringify(result, null, 2);
+        }
+    </script>
+</body>
+</html>
