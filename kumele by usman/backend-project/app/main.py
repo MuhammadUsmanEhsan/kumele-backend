@@ -60,11 +60,7 @@ from app.routers import stripe_payment, crypto_payment, paypal_payment
 
 # Add other routers here as needed, e.g., SEO, splash, etc.
 
-app = FastAPI(
-    title="Kumele API",
-    description="Backend for Kumele App with Auth, Referral, WebAuthn, QR login, Intro Video and more.",
-    version="1.0.0"
-)
+app = FastAPI()
 
 # Mount static directory for serving frontend (e.g., WebAuthn test page)
 app.mount("/static", StaticFiles(directory="static"), name="static")
