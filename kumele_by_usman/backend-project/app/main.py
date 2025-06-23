@@ -57,6 +57,7 @@ from app.routers import business_home
 from app.routers import business_ads
 from app.routers import notifications
 from app.routers import stripe_payment, crypto_payment, paypal_payment
+from app.routers import email_verification, user_permissions
 
 # Add other routers here as needed, e.g., SEO, splash, etc.
 
@@ -127,6 +128,8 @@ app.include_router(notifications.router)
 app.include_router(stripe_payment.router)
 app.include_router(crypto_payment.router)
 app.include_router(paypal_payment.router)
+app.include_router(email_verification.router, prefix="/email", tags=["Email Verification"])
+app.include_router(user_permissions.router, prefix="/permissions", tags=["User Permissions"])
 
 # Include additional routers as you build them
 
