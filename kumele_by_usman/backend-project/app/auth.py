@@ -46,7 +46,8 @@ class LoginRequest(BaseModel):
 class SignupRequest(BaseModel):
     name: str
     email: EmailStr
-    gender: str = Field(..., regex="^(Male|Female|Non-Binary)$")
+    gender: str = Field(..., pattern="^(Male|Female|Non-Binary)$")
+
     dob_day: int
     dob_month: int
     dob_year: int
