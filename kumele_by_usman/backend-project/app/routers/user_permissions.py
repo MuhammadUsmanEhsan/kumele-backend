@@ -1,22 +1,19 @@
 from fastapi import APIRouter, HTTPException
-from app.models.permissions_models import PermissionUpdate
+from app.models.permissions_models import PermissionAssignment, PermissionQuery
 
 router = APIRouter()
 
-permission_store = {}
+# Mock in-memory permissions store
+permissions_db = {}
 
-@router.post("/save")
-def save_user_permissions(data: PermissionUpdate):
-    permission_store[data.username] = data.permissions
-    return {
-        "message": "Permissions saved",
-        "username": data.username,
-        "permissions": data.permissions
-    }
+@router.post("/assign")
+def assign_permissions(data: PermissionAssignment):
+    permissions_db[data.username] = data.permissions
+    return {"message": f"Permissions assigned to {data.username}", "permissions": data.permissions}
 
-@router.get("/get/{username}")
-def get_user_permissions(username: str):
-    permissions = permission_store.get(username)
-    if not permissions:
-        raise HTTPException(status_code=404, detail="No permissions found")
-    return {"username": username, "permissions": permissions}
+@router.post("/get")
+def get_permissions(data: PermissionQuery):
+    user_perms = permissions_db.get(data.username)
+    if user_perms is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"username": data.username, "permissions": user_perms}

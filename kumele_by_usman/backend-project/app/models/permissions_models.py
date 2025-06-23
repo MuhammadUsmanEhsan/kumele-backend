@@ -1,6 +1,9 @@
 from pydantic import BaseModel
-from typing import Dict
+from typing import List
 
-class PermissionUpdate(BaseModel):
+class PermissionAssignment(BaseModel):
     username: str
-    permissions: Dict[str, bool]
+    permissions: List[str]
+
+class PermissionQuery(BaseModel):
+    username: str
