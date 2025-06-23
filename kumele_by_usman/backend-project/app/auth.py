@@ -1,7 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends, status, Body
 from fastapi.security import OAuth2PasswordBearer
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, Field, validator
 from jose import JWTError, jwt
+from datetime import date, datetime
 from typing import Optional
 import json
 
@@ -43,11 +44,47 @@ class LoginRequest(BaseModel):
     password: str
 
 class SignupRequest(BaseModel):
-    username: str
-    email: str
+    name: str
+    email: EmailStr
+    gender: str = Field(..., regex="^(Male|Female|Non-Binary)$")
+    dob_day: int
+    dob_month: int
+    dob_year: int
     password: str
-    phone: str
+    confirm_password: str
     referred_by: Optional[str] = None
+    is_legal_adult: bool
+    subscribe_newsletter: Optional[bool] = False
+    agree_terms: bool
+    captcha_verified: bool
+
+    @validator("confirm_password")
+    def passwords_match(cls, v, values):
+        if "password" in values and v != values["password"]:
+            raise ValueError("Passwords do not match")
+        return v
+
+    @validator("is_legal_adult")
+    def must_be_legal_adult(cls, v):
+        if not v:
+            raise ValueError("You must confirm you are a legal adult")
+        return v
+
+    @validator("agree_terms")
+    def must_agree_terms(cls, v):
+        if not v:
+            raise ValueError("You must agree to Terms & Conditions")
+        return v
+
+    @validator("captcha_verified")
+    def check_captcha(cls, v):
+        if not v:
+            raise ValueError("CAPTCHA verification failed")
+        return v
+
+    @property
+    def date_of_birth(self) -> date:
+        return date(self.dob_year, self.dob_month, self.dob_day)
 
 class TwoFARequest(BaseModel):
     phone: str
@@ -116,16 +153,29 @@ def login(data: LoginRequest):
 
 @router.post("/signup")
 def signup(data: SignupRequest):
+    today = date.today()
+    dob = data.date_of_birth
+    age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+    if age < 18:
+        raise HTTPException(status_code=400, detail="You must be at least 18 years old to register.")
+
     try:
         new_user = create_user(
-            username=data.username,
+            username=data.email,
             email=data.email,
             password=data.password,
             referred_by=data.referred_by,
-            phone=data.phone
+            phone=None,
+            extra_info={
+                "name": data.name,
+                "gender": data.gender,
+                "dob": str(dob),
+                "subscribe_newsletter": data.subscribe_newsletter
+            }
         )
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
+
     return {
         "message": "Signup successful",
         "user": new_user,
